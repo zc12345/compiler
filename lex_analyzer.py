@@ -4,12 +4,12 @@ input   :source code
 output  :words list
 '''
 from Error import ErrorType
-from Token import Token
-from Token import Place
-from lex_check import is_digit,is_letter,is_operator,check_reserve_word
+from Token import Token,Place
+from lex_check import is_digit,is_letter,is_operator,check_reserve_word,check_operator
 
 token_list = []
 token_no = 0
+flag_stack = []
 
 def lex_input(input_program):
     line_no = 0
@@ -25,18 +25,18 @@ def lex_input(input_program):
     for token in token_list:
         print(token.print_token())
 
-
 def lex_analyzer(line, line_no, *token_list):
     ''' 
     词法分析器
     '''
-    print(line)
-    i = 0
-    while i < len(line):
-        i = check_word(line, line_no, i)
-        i = i + 1
+    lptr = 0
+    rptr = 0 #指针指向当前所读部分的左右边界
+    while lptr < len(line) and rptr < len(line) and lptr <= rptr:#list取切片的时候左闭右开，同时len值为数组长度而不是最大下标
+        place = check_word(line, line_no, lptr, rptr)
+        lptr = place.get_lptr()
+        rptr = place.get_rptr()
 
-def check_word(line, line_no, i):
+def check_word(line, line_no, lptr, rptr):
     '''
     分割一个个关键字标识符和运算符
     标识符允许是字母开头的字母数字组合
@@ -49,71 +49,76 @@ def check_word(line, line_no, i):
     '''
     当读入字母的时候，判断是标识符还是关键字
     '''
-    if is_letter(line[i]):
-        str_token = str_token + line[i]
-        i = i + 1
-        while is_letter(line[i]) or is_digit(line[i]):
-            str_token = str_token + line[i]
-            i = i + 1
+    if is_letter(line[rptr]):#读入字母的时候检查是否符合命名规范，字母开头的字母数字组合，是关键字还是标识符
+        rptr = rptr + 1
+        while is_letter(line[rptr]) or is_digit(line[rptr]):
+            rptr = rptr + 1 #左指针不动，右指针不断右移，直到读取到的字符不再是字母或者数字
+        str_token = line[lptr:rptr]
         if check_reserve_word(str_token) != -1:
-            #place = Place(line_no, i, i + 1)
-            token_list.append(Token(token_no, "KEYWORD", line_no, str_token))
+            place = Place(line_no, lptr, rptr)#关键字
+            token_list.append(Token(token_no, "KEYWORD", place, str_token))
             token_no = token_no + 1
             print("%s是保留字"%str_token, check_reserve_word(str_token)) 
-        elif line[i] == ' ':
-            #place = Place(line_no, i, i + 1)
-            token_list.append(Token(token_no, "IDENTIFIER", line_no, str_token))
+        elif line[rptr] == ' ' or line[rptr] == ';' or line[rptr] == '=' or line[rptr] == '['or line[rptr] == ']' :
+            place = Place(line_no, lptr, rptr)#标识符
+            token_list.append(Token(token_no, "IDENTIFIER", place, str_token))
             token_no = token_no + 1
             print("%s是标识符"%str_token, check_reserve_word(str_token))
         else:
             print("line:%d Error：标识符只能是字母开头的字母数字组合！"%line_no)
-        i = i - 1
-    elif is_digit(line[i]):
-        while is_digit(line[i]):
-            str_token = str_token + line[i]
-            i = i + 1
-        if is_letter(line[i]):
+        lptr = rptr #将左指针移动到右指针处，进行下一次切片取字符操作
+    elif is_digit(line[rptr]):#读入数字的时候判断是整型还是浮点型
+        while is_digit(line[rptr]):
+            rptr = rptr + 1
+        str_token = line[lptr:rptr]
+        if is_letter(line[rptr]):
             print("line:%d Error：标识符只能以字母开头！"%line_no)
-        elif line[i] == '.':#处理小数
-            str_token = str_token + line[i]
-            i = i + 1
-            while is_digit(line[i]):
-                str_token = str_token + line[i]
-                i = i + 1
-            if line[i] == ' ':
-                value = float(str_token)
-                print("%f是浮点数"%value)
-            else:
+        if line[rptr] == '.':#处理浮点数
+            rptr = rptr + 1
+            while is_digit(line[rptr]):
+                rptr = rptr + 1
+            str_token = line[lptr: rptr]
+            value = float(str_token)
+            place = Place(line_no, lptr, rptr)
+            token_list.append(Token(token_no, "LITERAL", place, str_token))
+            token_no = token_no + 1
+            print("%f是浮点数"%value)
+            if not(line[rptr] == ' ' or line[rptr] == ';'):#小数只可能位于句尾
                 print("line:%d Error：字符格式错误"%line_no)
-        elif line[i] == ' ':#处理整数
+        elif line[rptr] == ' ' or line[rptr] == ';' or line[rptr] == ']' or line[rptr] == ',':#处理整型数，可能位于句尾或者位于（多维）数组
             value = int(str_token)
+            place = Place(line_no, lptr, rptr)
+            token_list.append(Token(token_no, "LITERAL", place, str_token))
+            token_no = token_no + 1
             print("%d是整数"%value)
-        i = i - 1
-    elif line[i] == ' ':
-        print("空格")
-    elif is_operator(line[i]):
-        token = check_operator(line, i, line_no)
-        token_no = token.get_no() + 1
+        lptr = rptr
+    elif line[rptr] == '\'':#处理char类型的字面量
+        if len(flag_stack) == 0:
+            flag_stack.append('\'')
+        else:
+            flag_stack.pop()
+        rptr = rptr + 1 
+        while rptr < len(line) and line[rptr] != '\'':
+            rptr = rptr + 1
+        rptr = rptr + 1
+        str_token = line[lptr: rptr]
+        place = Place(line_no, lptr, rptr)
+        token_list.append(Token(token_no, "LITERAL", place, str_token))
+        token_no = token_no + 1
+        lptr = rptr
+        print("%s是字符串"%str_token)
+    elif is_operator(line[rptr]):#处理操作符
+        token = check_operator(line, line_no, token_no, lptr, rptr)
         token_list.append(token)
-    else:
-        print("line %d Error：字符格式错误！"%line_no)
-    return i
-def check_operator(line, i, line_no):
-    '''
-    解析运算符
-    '''
-    operator_dict = {'+':"ADD", '-':"MINUS", '*':"MULTIPLY",#算术运算符 
-                     '=':"EQU", '<':"LESS", '>':"MORE", '<=':"LESSEQU", '>=':"MOREEQU", '!=':"NOTEQU",#比较运算符 
-                     '!':"NOT", '&&':"AND", '||':"OR", #布尔运算符
-                     '[':"LSQU", ']':"RSQU", '(':"LPAR", ')':"RPAR",#界符 
-                     '{':"LCUR", '}':"RCUR", ';':"SEP"}
-    global token_no
-    if is_operator(line[i+1]):
-        op = line[i] + line[i + 1]
-        i = i + 2
-        print("！双运算符 ======",op)
-    else:
-        op = line[i]
-        i = i + 1
-    token = Token(token_no, "OPERATER", line_no, operator_dict.get(op, "NONE"))
-    return token
+        token_no = token_no + 1
+        rptr = token.get_place().get_rptr()
+        lptr = rptr
+    elif line[lptr]==' ':#空格处理：直接跳过
+        lptr = lptr + 1
+        rptr = rptr + 1
+    else:#其他还没有想到的错误处理
+        #print("line %d col(%d,%d) Error：其他词法错误！"%(line_no, lptr, rptr))
+        lptr = lptr + 1
+        rptr = rptr + 1
+    place = Place(line_no, lptr, rptr)
+    return place

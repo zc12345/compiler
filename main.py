@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-#from lex_analyzer import lex_input
-from test import lex_input
+from lex_analyzer import lex_input
+
 # 从文本文档读取输入代码段
 try:
     with open("test.txt","r") as input_program:
