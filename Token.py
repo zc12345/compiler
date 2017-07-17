@@ -10,7 +10,7 @@ class Token(object):
         self.__value = value #token值
 
     def print_token(self):
-        print("%s\t%s\t%s\t%s"%(self.__no, self.__type, self.__place, self.__value))
+        print("%s\t%s\t%s\t%s"%(self.__no, self.__type, self.__place.get_place(), self.__value))
 
     def get_no(self):
         return self.__no
@@ -22,10 +22,18 @@ class Token(object):
         return self.__value
 
 class Place(object):
-    def __init__(self, line, col_left, col_right):
+    def __init__(self, line, lptr, rptr):
         self.__line = line
-        self.__col_left = col_left
-        self.__col_right = col_right
+        self.__lptr = lptr
+        self.__rptr = rptr
+    def get_place(self):
+        return [self.__line, self.__lptr, self.__rptr]
 
     def print_place(self):
-        print("line:%d col_left_ptr:%d col_right_ptr:%d"%(self.__line, self.__col_left, self.__col_right))
+        print("line:%d left_ptr:%d right_ptr:%d"%(self.__line, self.__lptr, self.__rptr))
+
+    def get_lptr(self):
+        return self.__lptr
+
+    def get_rptr(self):
+        return self.__rptr

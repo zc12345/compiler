@@ -6,19 +6,32 @@ output  :words list
 from Error import ErrorType
 from Token import Token
 from Token import Place
+from lex_check import is_digit,is_letter,is_operator,check_reserve_word
 
-def lex_analyzer(line,line_no):
+token_list = []
+token_no = 0
+
+def lex_input(input_program):
+    line_no = 0
+    for line in input_program:
+        print("line%d"%line_no,line)
+        if line[0] == '#':#跳过#开头的注释
+            line_no = line_no + 1
+            continue
+        else:
+            lex_analyzer(line, line_no)
+            line_no = line_no + 1
+    print("="*20,"源程序读取结束！","="*20)
+    for token in token_list:
+        print(token.print_token())
+
+
+def lex_analyzer(line, line_no, *token_list):
     ''' 
     词法分析器
     '''
     print(line)
     i = 0
-    '''
-    for ch in line:
-        print("character %d"%i,ch,line[i])
-        i = i + 1
-    i = 0
-    '''
     while i < len(line):
         i = check_word(line, line_no, i)
         i = i + 1
@@ -32,6 +45,10 @@ def check_word(line, line_no, i):
     布尔表达式: &&, ||, !
     '''
     str_token = ''
+    global token_no
+    '''
+    当读入字母的时候，判断是标识符还是关键字
+    '''
     if is_letter(line[i]):
         str_token = str_token + line[i]
         i = i + 1
@@ -39,8 +56,14 @@ def check_word(line, line_no, i):
             str_token = str_token + line[i]
             i = i + 1
         if check_reserve_word(str_token) != -1:
-            print("%s是保留字"%str_token, check_reserve_word(str_token))
+            #place = Place(line_no, i, i + 1)
+            token_list.append(Token(token_no, "KEYWORD", line_no, str_token))
+            token_no = token_no + 1
+            print("%s是保留字"%str_token, check_reserve_word(str_token)) 
         elif line[i] == ' ':
+            #place = Place(line_no, i, i + 1)
+            token_list.append(Token(token_no, "IDENTIFIER", line_no, str_token))
+            token_no = token_no + 1
             print("%s是标识符"%str_token, check_reserve_word(str_token))
         else:
             print("line:%d Error：标识符只能是字母开头的字母数字组合！"%line_no)
@@ -69,78 +92,28 @@ def check_word(line, line_no, i):
     elif line[i] == ' ':
         print("空格")
     elif is_operator(line[i]):
-        i = check_operator(line, i)
+        token = check_operator(line, i, line_no)
+        token_no = token.get_no() + 1
+        token_list.append(token)
     else:
         print("line %d Error：字符格式错误！"%line_no)
     return i
-def check_operator(line, i):
+def check_operator(line, i, line_no):
     '''
     解析运算符
     '''
-    if line[i] == '+':
-        print("操作符：+")
-    elif line[i] == '-':
-        print("操作符：-")
-    elif line[i] == '*':
-        print("操作符：*")
-    elif line[i] == '=':
-        print("操作符：=")
-    elif line[i] == '<':
-        print("操作符：<")
-    elif line[i] == '>':
-        print("操作符：>")
-    elif line[i] == '!':
-        print("操作符：!")
-    elif line[i] == ';':
-        print("分隔符：;")
-    elif line[i] == '[':
-        print("操作符：[")
-    elif line[i] == ']':
-        print("操作符：]")
-    elif line[i] == '(':
-        print("操作符：(")
-    elif line[i] == ')':
-        print("操作符：)")
-    elif line[i] == '{':
-        print("操作符：{")
-    elif line[i] == '}':
-        print("操作符：}")
-    return i
-
-def is_operator(char):
-    '''
-    确定是否为运算符
-    '''
-    operator_dict = ['+', '-', '*', '=', '<', '>', '!', '[', ']', '(', ')', '{', '}', ';']
-    for operator in operator_dict:
-        if operator == char:
-            return True
-    return False
-
-def is_letter(char):
-    '''
-    检查是否是字母
-    '''
-    if (char <= 'z' and char >= 'a') or (char <= 'Z' and char >= 'A'):
-        return True
+    operator_dict = {'+':"ADD", '-':"MINUS", '*':"MULTIPLY",#算术运算符 
+                     '=':"EQU", '<':"LESS", '>':"MORE", '<=':"LESSEQU", '>=':"MOREEQU", '!=':"NOTEQU",#比较运算符 
+                     '!':"NOT", '&&':"AND", '||':"OR", #布尔运算符
+                     '[':"LSQU", ']':"RSQU", '(':"LPAR", ')':"RPAR",#界符 
+                     '{':"LCUR", '}':"RCUR", ';':"SEP"}
+    global token_no
+    if is_operator(line[i+1]):
+        op = line[i] + line[i + 1]
+        i = i + 2
+        print("！双运算符 ======",op)
     else:
-        return False
-
-def is_digit(char):
-    '''
-    检查是否是数字
-    '''
-    if char <= '9' and char >= '0':
-        return True
-    else:
-        return False
-
-def check_reserve_word(str):
-    '''
-    检查是否是保留字
-    '''
-    reserve_dict = {'if':1, 'then':2, 'else':3, 'do':4, 'while':5,
-                    'for':6, 'int':7, 'float':8, 'char':9, 'boolean':10,
-                    'and':11, 'or':12, 'not':13, 'true':14, 'false':15,
-                    'null':16}
-    return reserve_dict.get(str, -1)
+        op = line[i]
+        i = i + 1
+    token = Token(token_no, "OPERATER", line_no, operator_dict.get(op, "NONE"))
+    return token
