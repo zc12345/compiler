@@ -1,8 +1,5 @@
 /.vscode
 /__pycache__
-input1.txt
-input2.txt
-input3.txt
-input4.txt
-test.txt
+/input_test
+/output
 #test.py

@@ -3,7 +3,9 @@ def is_operator(char):
     '''
     检查是否为运算符或者界符
     '''
-    operator_dict = ['+', '-', '*', '=', '<', '>', '!', '[', ']', '(', ')', '{', '}', ';', ',', '&', '|']
+    operator_dict = ['+', '-', '*', '=', '<', '>', '!', 
+                     '[', ']', '(', ')', '{', '}', ';', ',', '&', '|',
+                     ':']
     for operator in operator_dict:
         if operator == char:
             return True
@@ -43,11 +45,17 @@ def check_operator(line, line_no, token_no, lptr, rptr):
     解析运算符
     '''
     operator_dict = {'+':"ADD", '-':"MINUS", '*':"MULTIPLY",#算术运算符 
-                     '=':"EQU", '<':"LESS", '>':"MORE", #比较运算符
+                     #'=':"EQU", #赋值
+                     '<':"LESS", '>':"MORE", #比较运算符
                      '!':"NOT", #布尔运算符
                      '[':"LSQU", ']':"RSQU", '(':"LPAR", ')':"RPAR",#界符 
-                     '{':"LCUR", '}':"RCUR", ';':"SEP", ',':"COMMA"}
+                     '{':"LCUR", '}':"RCUR", ';':"SEP", ',':"COMMA", 
+                     '++':"INCREASE", '--':"DECREASE", 
+                     '<=':"LESSEQU", '>=':"MOREEQU", '!=':"NOTEQU",#比较运算符 
+                     ':=':"EQU", 
+                     '&&':"AND", '||':"OR"} #布尔运算符}
     operator_dict_double = {'<=':"LESSEQU", '>=':"MOREEQU", '!=':"NOTEQU",#比较运算符 
+                            ':=':"EQU", '++':"INCREASE", '--':"DECREASE", 
                             '&&':"AND", '||':"OR"} #布尔运算符
     if rptr + 1 < len(line) and operator_dict_double.get(line[lptr:rptr+2],-1)!=-1:
         rptr = rptr + 2

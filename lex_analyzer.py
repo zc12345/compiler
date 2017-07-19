@@ -6,8 +6,12 @@ output  :words list
 from Error import ErrorType
 from Token import Token,Place
 from lex_check import is_digit,is_letter,is_operator,check_reserve_word,check_operator
+from syntactic_analyzer import syntactic_analyzer
+from semantic_analyzer import semantic_analyzer
 
 token_list = []
+error_list = []
+grammar_tree = []
 token_no = 0
 flag_stack = []
 
@@ -22,8 +26,12 @@ def lex_input(input_program):
             lex_analyzer(line, line_no)
             line_no = line_no + 1
     print("="*20,"源程序读取结束！","="*20)
+    syntactic_analyzer(token_list)
     for token in token_list:
         print(token.print_token())
+    for error in error_list:
+        print(error.print_error())
+    return token_list
 
 def lex_analyzer(line, line_no, *token_list):
     ''' 
@@ -59,7 +67,7 @@ def check_word(line, line_no, lptr, rptr):
             token_list.append(Token(token_no, "KEYWORD", place, str_token))
             token_no = token_no + 1
             print("%s是保留字"%str_token, check_reserve_word(str_token)) 
-        elif line[rptr] == ' ' or line[rptr] == ';' or line[rptr] == '=' or line[rptr] == '['or line[rptr] == ']' :
+        elif line[rptr] == ' ' or is_operator(line[rptr]):#or line[rptr] == ';' or line[rptr] == '=' or line[rptr] == '['or line[rptr] == ']' :
             place = Place(line_no, lptr, rptr)#标识符
             token_list.append(Token(token_no, "IDENTIFIER", place, str_token))
             token_no = token_no + 1
@@ -106,6 +114,8 @@ def check_word(line, line_no, lptr, rptr):
         token_list.append(Token(token_no, "LITERAL", place, str_token))
         token_no = token_no + 1
         lptr = rptr
+        if len(flag_stack):
+            error_list.append(ErrorType(3,place))
         print("%s是字符串"%str_token)
     elif is_operator(line[rptr]):#处理操作符
         token = check_operator(line, line_no, token_no, lptr, rptr)
